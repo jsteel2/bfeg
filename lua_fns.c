@@ -155,6 +155,8 @@ static int l_draw_text(lua_State *L)
     SDL_Surface *s = TTF_RenderText_Blended(font, lua_tostring(L, 4), color);
     SDL_Texture *t = SDL_CreateTextureFromSurface(ren, s);
     SDL_RenderCopy(ren, t, NULL, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = s->w, .h = s->h});
+    SDL_FreeSurface(s);
+    SDL_DestroyTexture(t);
     return 0;
 }
 
