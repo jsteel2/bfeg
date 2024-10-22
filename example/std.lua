@@ -66,6 +66,7 @@ function scene_play()
     local text = nil
     local function cb()
         go = false
+        return true
     end
     if scene.dialog then
         id = set_event_callback(EVENT_MOUSEBUTTONDOWN, cb)
@@ -127,6 +128,12 @@ function scene_play()
             while go and ticks() - start < min_sleep do wait(math.ceil(min_sleep - (ticks() - start))) end
         else
             wait()
+        end
+
+        if not go and text and (dialog_line < #text or dialog_i < text[dialog_line]:len()) then
+            dialog_line = #text
+            dialog_i = text[dialog_line]:len()
+            go = true
         end
     end
 
