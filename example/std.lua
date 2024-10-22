@@ -23,13 +23,13 @@ function set_event_callback(ev, fn)
 end
 
 function clear_event_callback(ev, id)
-    table.remove(callbacks[ev], id)
+    callbacks[ev] = nil
 end
 
 function handle_event(ev, data)
     if not callbacks[ev] then return end
     for _, v in ipairs(callbacks[ev]) do
-        if v(data) then break end
+        if v and v(data) then break end
     end
 end
 
@@ -63,7 +63,7 @@ end
 
 local arrow = load_image("arrow.png")
 function scene_add_arrow(rotation, x, y, callback)
-    scene_add_image(arrow, x, y)
+    scene_add_image(arrow, x, y, rotation)
     scene_add_clickable_rect(x, y, image_w(arrow), image_h(arrow), callback, function(hover_toggle)
         if hover_toggle then set_cursor(CURSOR_HAND)
         else set_cursor(CURSOR_ARROW)

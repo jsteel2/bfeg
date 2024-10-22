@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include <lauxlib.h>
 #include "lua_fns.h"
 
@@ -10,6 +11,8 @@ static SDL_Window *win;
 static zip_t *zip;
 static TTF_Font *font = NULL;
 static SDL_Cursor *cursor = NULL;
+static Mix_Music *music = NULL;
+static Mix_Music *music_q = NULL;
 
 void quit(void)
 {
@@ -17,6 +20,7 @@ void quit(void)
     SDL_DestroyWindow(win);
     IMG_Quit();
     TTF_Quit();
+    Mix_CloseAudio();
     SDL_Quit();
     exit(0);
 }
@@ -220,16 +224,16 @@ static int l_present(lua_State *L)
 
 static int l_draw_image(lua_State *L)
 {
-    if (lua_gettop(L) > 3)
+    if (lua_gettop(L) > 4)
     {
-        SDL_RenderCopy(ren, *(SDL_Texture **)lua_touserdata(L, 1), &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)}, &(SDL_Rect){.x = lua_tointeger(L, 6), .y = lua_tointeger(L, 7), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)});
+        SDL_RenderCopyEx(ren, *(SDL_Texture **)lua_touserdata(L, 1), &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)}, &(SDL_Rect){.x = lua_tointeger(L, 6), .y = lua_tointeger(L, 7), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)}, lua_gettop(L) > 7 ? lua_tointeger(L, 8) : 0, NULL, SDL_FLIP_NONE);
     }
     else
     {
         SDL_Texture *t = *(SDL_Texture **)lua_touserdata(L, 1);
         int w, h;
         SDL_QueryTexture(t, NULL, NULL, &w, &h);
-        SDL_RenderCopy(ren, t, NULL, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = w, .h = h});
+        SDL_RenderCopyEx(ren, t, NULL, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = w, .h = h}, lua_gettop(L) > 3 ? lua_tointeger(L, 4) : 0, NULL, SDL_FLIP_NONE);
     }
 
     return 0;
@@ -267,6 +271,42 @@ static int l_set_cursor(lua_State *L)
     return 0;
 }
 
+static Mix_Music *load_music(const char *filename)
+{
+    size_t size;
+    char *p = read_file(filename, &size);
+    if (!p) return NULL;
+    SDL_RWops *rw = SDL_RWFromConstMem(p, size);
+    return Mix_LoadMUS_RW(rw, 1);
+}
+
+static int l_play_music(lua_State *L)
+{
+    if (music) Mix_FreeMusic(music);
+    music = load_music(lua_tostring(L, 1));
+    if (!music) return 0;
+    Mix_PlayMusic(music, lua_gettop(L) > 1 ? lua_tointeger(L, 2) : -1);
+    return 0;
+}
+
+static void music_finished(void)
+{
+    if (music) Mix_FreeMusic(music);
+    music = music_q;
+    music_q = NULL;
+    Mix_HookMusicFinished(NULL);
+    Mix_PlayMusic(music, -1);
+}
+
+static int l_queue_music(lua_State *L)
+{
+    if (music_q) Mix_FreeMusic(music_q);
+    music_q = load_music(lua_tostring(L, 1));
+    if (!music_q) return 0;
+    Mix_HookMusicFinished(music_finished);
+    return 0;
+}
+
 void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 {
     ren = r;
@@ -294,6 +334,11 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 
     lua_pushcfunction(L, l_load_image);
     lua_setglobal(L, "load_image");
+
+    lua_pushcfunction(L, l_play_music);
+    lua_setglobal(L, "play_music");
+    lua_pushcfunction(L, l_queue_music);
+    lua_setglobal(L, "queue_music");
     lua_pushcfunction(L, l_present);
     lua_setglobal(L, "present");
     lua_pushcfunction(L, l_draw_image);

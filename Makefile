@@ -1,5 +1,5 @@
-LIBS+=`pkg-config --libs lua5.3 libzip sdl2 SDL2_ttf SDL2_image`
-CFLAGS+=`pkg-config --cflags lua5.3 libzip sdl2 SDL2_ttf SDL2_image`
+LIBS+=`pkg-config --libs lua5.3 libzip sdl2 SDL2_ttf SDL2_image SDL2_mixer`
+CFLAGS+=`pkg-config --cflags lua5.3 libzip sdl2 SDL2_ttf SDL2_image SDL2_mixer`
 
 OBJ=main.o lua_fns.o
 
