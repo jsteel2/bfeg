@@ -26,11 +26,23 @@ function clear_event_callback(ev, id)
     callbacks[ev] = nil
 end
 
-function handle_event(ev, data)
-    if not callbacks[ev] then return end
-    for _, v in ipairs(callbacks[ev]) do
-        if v and v(data) then break end
+cur_cursor = CURSOR_ARROW
+function set_cursor(cursor)
+    if cursor ~= cur_cursor then
+        cur_cursor = cursor
+        set_system_cursor(cursor)
     end
+end
+
+function handle_event(ev, data)
+    if not callbacks[ev] then
+         set_cursor(CURSOR_ARROW)
+        return
+    end
+    for _, v in ipairs(callbacks[ev]) do
+        if v and v(data) then return end
+    end
+    set_cursor(CURSOR_ARROW)
 end
 
 scene = {
@@ -61,14 +73,16 @@ function scene_add_animation(image, sheet_frames, anim_frames, fps, x, y, start,
     }
 end
 
+function hover_hand(hover_toggle)
+    if hover_toggle then set_cursor(CURSOR_HAND)
+    else set_cursor(CURSOR_ARROW)
+    end
+end
+
 local arrow = load_image("arrow.png")
 function scene_add_arrow(rotation, x, y, callback)
     scene_add_image(arrow, x, y, rotation)
-    scene_add_clickable_rect(x, y, image_w(arrow), image_h(arrow), callback, function(hover_toggle)
-        if hover_toggle then set_cursor(CURSOR_HAND)
-        else set_cursor(CURSOR_ARROW)
-        end
-    end)
+    scene_add_clickable_rect(x, y, image_w(arrow), image_h(arrow), callback, hover_hand)
 end
 
 function scene_add_clickable_rect(x, y, w, h, callback, hover_callback)
@@ -83,7 +97,7 @@ function scene_add_clickable_rect(x, y, w, h, callback, hover_callback)
     }
 end
 
-function scene_play()
+function scene_play(instant_dialog)
     local ids = {}
     local go = true
     local text = nil
@@ -101,12 +115,11 @@ function scene_play()
             if not c.hover_toggle and ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
                 c.hover_toggle = true
                 c.hover_callback(true)
-                return true
             elseif c.hover_toggle and (ev.x < c.x or ev.y < c.y or ev.x > c.x + c.w or ev.y > c.y + c.h) then
                 c.hover_toggle = false
                 c.hover_callback(false)
             end
-            return false
+            return c.hover_toggle
         end)}
         ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, function(ev)
             if ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
@@ -127,6 +140,10 @@ function scene_play()
     local dialog_last_time = nil
     local dialog_line = 1
     local dialog_i = 1
+    if instant_dialog then
+        dialog_line = #text
+        dialog_i = text[dialog_line]:len()
+    end
     while go do
         local min_sleep = 100000
         local start = nil
@@ -204,7 +221,7 @@ function scene_clear()
     scene.dialog = nil
 end
 
-function dialog(text)
+function dialog(text, instant)
     scene.dialog = text
-    scene_play()
+    scene_play(instant)
 end

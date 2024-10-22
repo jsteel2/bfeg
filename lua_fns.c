@@ -358,7 +358,7 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
     lua_setglobal(L, "EVENT_MOUSEMOTION");
 
     lua_pushcfunction(L, l_set_cursor);
-    lua_setglobal(L, "set_cursor");
+    lua_setglobal(L, "set_system_cursor");
     lua_pushinteger(L, SDL_SYSTEM_CURSOR_ARROW);
     lua_setglobal(L, "CURSOR_ARROW");
     lua_pushinteger(L, SDL_SYSTEM_CURSOR_HAND);
