@@ -1,0 +1,4 @@
+*.o
+*.bfe
+bfeg
+compile_commands.json
