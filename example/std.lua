@@ -164,7 +164,11 @@ function scene_play(instant_dialog)
             end
             if not start or v.last_time > start then start = v.last_time end
             if 1000 / v.fps < min_sleep then min_sleep = 1000 / v.fps end
-            draw_image(v.image, image_w(v.image) // v.sheet_frames * ((v.cur_frame - v.start_frame) % v.anim_frames), 0, image_w(v.image) // v.sheet_frames, image_h(v.image), v.x, v.y)
+            if type(v.image) == "function" then
+                v.image(v)
+            else
+                draw_image(v.image, image_w(v.image) // v.sheet_frames * ((v.cur_frame - v.start_frame) % v.anim_frames), 0, image_w(v.image) // v.sheet_frames, image_h(v.image), v.x, v.y)
+            end
         end
 
         if text then
