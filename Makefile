@@ -3,6 +3,8 @@ CFLAGS+=`pkg-config --cflags lua5.3 libzip sdl2 SDL2_ttf SDL2_image`
 
 OBJ=main.o lua_fns.o
 
+all: bfeg example.bfe
+
 bfeg: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 

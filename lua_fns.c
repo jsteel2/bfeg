@@ -9,6 +9,7 @@ static SDL_Renderer *ren;
 static SDL_Window *win;
 static zip_t *zip;
 static TTF_Font *font = NULL;
+static SDL_Cursor *cursor = NULL;
 
 void quit(void)
 {
@@ -88,6 +89,7 @@ static void handle_event(lua_State *L, SDL_Event *e)
         case SDL_QUIT:
             quit();
         case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
             lua_getglobal(L, "handle_event");
             lua_pushinteger(L, e->type);
             lua_createtable(L, 0, 3);
@@ -99,6 +101,18 @@ static void handle_event(lua_State *L, SDL_Event *e)
             lua_settable(L, -3);
             lua_pushstring(L, "button");
             lua_pushinteger(L, e->button.button);
+            lua_settable(L, -3);
+            lua_call(L, 2, 0);
+            break;
+        case SDL_MOUSEMOTION:
+            lua_getglobal(L, "handle_event");
+            lua_pushinteger(L, e->type);
+            lua_createtable(L, 0, 2);
+            lua_pushstring(L, "x");
+            lua_pushinteger(L, e->motion.x);
+            lua_settable(L, -3);
+            lua_pushstring(L, "y");
+            lua_pushinteger(L, e->motion.y);
             lua_settable(L, -3);
             lua_call(L, 2, 0);
             break;
@@ -245,6 +259,14 @@ static int l_image_h(lua_State *L)
     return 1;
 }
 
+static int l_set_cursor(lua_State *L)
+{
+    if (cursor) SDL_FreeCursor(cursor);
+    cursor = SDL_CreateSystemCursor(lua_tointeger(L, 1));
+    SDL_SetCursor(cursor);
+    return 0;
+}
+
 void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 {
     ren = r;
@@ -285,4 +307,15 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 
     lua_pushinteger(L, SDL_MOUSEBUTTONDOWN);
     lua_setglobal(L, "EVENT_MOUSEBUTTONDOWN");
+    lua_pushinteger(L, SDL_MOUSEBUTTONUP);
+    lua_setglobal(L, "EVENT_MOUSEBUTTONUP");
+    lua_pushinteger(L, SDL_MOUSEMOTION);
+    lua_setglobal(L, "EVENT_MOUSEMOTION");
+
+    lua_pushcfunction(L, l_set_cursor);
+    lua_setglobal(L, "set_cursor");
+    lua_pushinteger(L, SDL_SYSTEM_CURSOR_ARROW);
+    lua_setglobal(L, "CURSOR_ARROW");
+    lua_pushinteger(L, SDL_SYSTEM_CURSOR_HAND);
+    lua_setglobal(L, "CURSOR_HAND");
 }

@@ -1,6 +1,35 @@
 import("std.lua")
 
-local function scene1()
+function scene1()
+    scene_clear()
+    scene_set_background(load_image("bg4.png"))
+    scene_add_animation(load_image("trixie-lay.png"), 3, 3, 7, 300, 225, 1, {4, [4]=7, [7]=10, [10]=13, [13]=16, [16]=19, [19]=22, [22]=25, [25]=28, [28]=31, [31]=3, [3]=2, [2]=6, [6]=1})
+    scene_add_arrow(0, 445, 315, scene2)
+    return scene_play()
+end
+
+function scene2()
+    scene_clear()
+    scene_set_background(load_image("bg5.png"))
+    scene_add_arrow(0, 445, 315, scene3)
+    return scene_play()
+end
+
+function scene3()
+    scene_clear()
+    scene_set_background(load_image("bg6.png"))
+    scene_add_arrow(0, 445, 315, scene4)
+    return scene_play()
+end
+
+function scene4()
+    scene_clear()
+    scene_set_background(load_image("bg7.png"))
+    scene_add_arrow(0, 445, 315, scene1)
+    return scene_play()
+end
+
+function intro()
     scene_set_background(load_image("bg.png"))
     scene_add_animation(load_image("trixie1.png"), 4, 4, 10, 100, 0, 1, {2, 3, 5, 6, 4, 1})
     dialog("HEY, HEY!!! ARE YOU ASLEEP?\nC'MON! ANSWER THE GREAT TRIXIE!")
@@ -35,9 +64,7 @@ local function scene1()
     scene_add_animation(load_image("trixie4.png"), 17, 17, 14, 0, 0, 1, {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 13})
     dialog("CUTE. NOW GO. I WILL STAY\nAROUND HERE FOR A BIT.")
     dialog("THE GREAT AND POWERFUL TRIXIE\nSHALL SPEAK TO YOU LATER.")
-    scene_clear()
-    scene_add_animation(load_image("trixie-lay.png"), 3, 3, 7, 300, 225, 1, {4, [4]=7, [7]=10, [10]=13, [13]=16, [16]=19, [19]=22, [22]=25, [25]=28, [28]=31, [31]=3, [3]=2, [2]=6, [6]=1})
-    scene_play()
+    return scene1()
 end
 
-scene1()
+intro()

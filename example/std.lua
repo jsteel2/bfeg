@@ -35,7 +35,8 @@ end
 
 scene = {
     images = {},
-    animations = {}
+    animations = {},
+    clickables = {}
 }
 function scene_set_background(image)
     scene.background = image
@@ -60,17 +61,68 @@ function scene_add_animation(image, sheet_frames, anim_frames, fps, x, y, start,
     }
 end
 
+local arrow = load_image("arrow.png")
+function scene_add_arrow(rotation, x, y, callback)
+    scene_add_image(arrow, x, y)
+    scene_add_clickable_rect(x, y, image_w(arrow), image_h(arrow), callback, function(hover_toggle)
+        if hover_toggle then set_cursor(CURSOR_HAND)
+        else set_cursor(CURSOR_ARROW)
+        end
+    end)
+end
+
+function scene_add_clickable_rect(x, y, w, h, callback, hover_callback)
+    scene.clickables[#scene.clickables + 1] = {
+        x = x,
+        y = y,
+        w = w,
+        h = h,
+        callback = callback,
+        hover_callback = hover_callback,
+        hover_toggle = false
+    }
+end
+
 function scene_play()
-    local id
+    local ids = {}
     local go = true
     local text = nil
     local function cb()
         go = false
         return true
     end
+    local clickcb = nil
     if scene.dialog then
-        id = set_event_callback(EVENT_MOUSEBUTTONDOWN, cb)
+        ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, cb)}
         text = split(scene.dialog, "\n")
+    end
+    for _, c in ipairs(scene.clickables) do
+        ids[#ids + 1] = {EVENT_MOUSEMOTION, set_event_callback(EVENT_MOUSEMOTION, function(ev)
+            if not c.hover_toggle and ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
+                c.hover_toggle = true
+                c.hover_callback(true)
+                return true
+            elseif c.hover_toggle and (ev.x < c.x or ev.y < c.y or ev.x > c.x + c.w or ev.y > c.y + c.h) then
+                c.hover_toggle = false
+                c.hover_callback(false)
+            end
+            return false
+        end)}
+        ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, function(ev)
+            if ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
+                clickcb = c.callback
+                set_cursor(CURSOR_ARROW)
+                return true
+            end
+            return false
+        end)}
+        ids[#ids + 1] = {EVENT_MOUSEBUTTONUP, set_event_callback(EVENT_MOUSEBUTTONUP, function(ev)
+            if ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
+                set_cursor(CURSOR_HAND)
+                return true
+            end
+            return false
+        end)}
     end
     local dialog_last_time = nil
     local dialog_line = 1
@@ -135,14 +187,20 @@ function scene_play()
             dialog_i = text[dialog_line]:len()
             go = true
         end
+        if clickcb then break end
     end
 
-    if scene.dialog then clear_event_callback(EVENT_MOUSEBUTTONDOWN, id) end
+    for _, v in ipairs(ids) do
+        clear_event_callback(table.unpack(v))
+    end
+
+    if clickcb then return clickcb() end
 end
 
 function scene_clear()
     scene.images = {}
     scene.animations = {}
+    scene.clickables = {}
     scene.dialog = nil
 end
 
