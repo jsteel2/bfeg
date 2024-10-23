@@ -13,6 +13,7 @@ end
 function scene2()
     scene_clear()
     scene_set_background(load_image("bg5.png"))
+    scene_add_item("ball", 2, load_image("ball-ground.png"), load_image("ball-get.png"), load_image("ball-inventory.png"), 75, 200, scene2)
     scene_add_arrow(0, 445, 315, scene3)
     scene_add_arrow(180, 0, 315, scene1)
     return scene_play()

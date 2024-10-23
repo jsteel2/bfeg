@@ -111,8 +111,20 @@ function scene_add_clickable_rect(x, y, w, h, callback, hover_callback, dont_hal
 end
 
 function scene_add_clickable_image(z, image, x, y, callback, hover_callback, dont_halt, perm)
-    scene_add_animation({image, x, y}, nil, nil, nil, nil, nil, nil, nil, z, true, perm)
-    return scene_add_clickable_rect(x, y, image_w(image), image_h(image), callback, hover_callback, dont_halt, perm)
+    local a = scene_add_animation({image, x, y}, nil, nil, nil, nil, nil, nil, nil, z, true, perm)
+    return a, scene_add_clickable_rect(x, y, image_w(image), image_h(image), callback, hover_callback, dont_halt, perm)
+end
+
+inventory = {}
+function scene_add_item(name, z, image, got_image, inv_image, x, y, next)
+    if inventory[name] and inventory[name].got then return end
+    scene_add_clickable_image(z, image, x, y, function()
+        inventory[name] = {got = true, has = true, image = inv_image}
+        scene_clear()
+        scene_add_image(4, got_image, 100, 100)
+        dialog("YOU GOT:\n" .. name, true)
+        return next()
+    end, hover_hand)
 end
 
 function remove_if(arr, fn)
@@ -335,13 +347,22 @@ scene_clear()
 local menu_button = load_image("menu-button.png")
 local menu = load_image("menu.png")
 scene_add_clickable_image(10, menu_button, 465, 10, function()
-    local i1 = scene_add_animation(function() draw_rect(0x00000030, 0, 0, 496, 368) end, 0, 0, 0, 0, 0, 1, {1}, 11, nil, true)
-    local i3 = scene_add_animation({menu, -5, -10}, nil, nil, nil, nil, nil, nil, nil, 12, true, true)
-    local i2
-    i2 = scene_add_clickable_rect(0, 0, 496, 368, function()
-        scene_remove_animation(i1)
-        scene_remove_clickable(i2)
-        scene_remove_animation(i3)
+    local a = {}
+    a[#a + 1] = scene_add_animation(function() draw_rect(0x00000030, 0, 0, 496, 368) end, 0, 0, 0, 0, 0, 1, {1}, 11, nil, true)
+    a[#a + 1] = scene_add_animation({menu, -5, -10}, nil, nil, nil, nil, nil, nil, nil, 12, true, true)
+    local c = {}
+    for _, v in pairs(inventory) do
+        if not v.has then goto continue end
+        a[#a + 1] = scene_add_animation({v.image, 75, 230}, nil, nil, nil, nil, nil, nil, nil, 13, true, true)
+        ::continue::
+    end
+    c[#c + 1] = scene_add_clickable_rect(0, 0, 496, 368, function()
+        for _, v in ipairs(a) do
+            scene_remove_animation(v)
+        end
+        for _, v in ipairs(c) do
+            scene_remove_clickable(v)
+        end
         return true
     end, hover_hand, true, true)
     return true
