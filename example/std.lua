@@ -46,7 +46,6 @@ function handle_event(ev, data)
 end
 
 scene = {
-    images = {},
     animations = {},
     clickables = {}
 }
@@ -54,23 +53,32 @@ function scene_set_background(image)
     scene.background = image
 end
 
-function scene_add_image(...)
-    scene.images[#scene.images + 1] = {...}
+function scene_add_image(z, ...)
+    return scene_add_animation({...}, nil, nil, nil, nil, nil, nil, nil, z, true)
 end
 
-function scene_add_animation(image, sheet_frames, anim_frames, fps, x, y, start, frames)
+local scene_id = 1
+function scene_add_animation(image, sheet_frames, anim_frames, fps, x, y, start, frames, z, still, perm)
+    if not z then z = 0 end
     scene.animations[#scene.animations + 1] = {
+        animated = not still,
         image = image,
         fps = fps,
         x = x,
         y = y,
+        z = z,
         sheet_frames = sheet_frames,
         anim_frames = anim_frames,
         frames = frames,
         cur_frame = start,
         start_frame = start,
-        last_time = nil
+        last_time = nil,
+        id = scene_id,
+        perm = perm
     }
+    scene_id = scene_id + 1
+    table.sort(scene.animations, function(l, r) return l.z < r.z end)
+    return scene_id - 1
 end
 
 function hover_hand(hover_toggle)
@@ -81,11 +89,11 @@ end
 
 local arrow = load_image("arrow.png")
 function scene_add_arrow(rotation, x, y, callback)
-    scene_add_image(arrow, x, y, rotation)
+    scene_add_image(2, arrow, x, y, rotation)
     scene_add_clickable_rect(x, y, image_w(arrow), image_h(arrow), callback, hover_hand)
 end
 
-function scene_add_clickable_rect(x, y, w, h, callback, hover_callback)
+function scene_add_clickable_rect(x, y, w, h, callback, hover_callback, dont_halt, perm)
     scene.clickables[#scene.clickables + 1] = {
         x = x,
         y = y,
@@ -93,24 +101,56 @@ function scene_add_clickable_rect(x, y, w, h, callback, hover_callback)
         h = h,
         callback = callback,
         hover_callback = hover_callback,
-        hover_toggle = false
+        hover_toggle = false,
+        halt_scene = not dont_halt,
+        id = scene_id,
+        perm = perm
     }
+    scene_id = scene_id + 1
+    return scene_id - 1
+end
+
+function scene_add_clickable_image(z, image, x, y, callback, hover_callback, dont_halt, perm)
+    scene_add_animation({image, x, y}, nil, nil, nil, nil, nil, nil, nil, z, true, perm)
+    return scene_add_clickable_rect(x, y, image_w(image), image_h(image), callback, hover_callback, dont_halt, perm)
+end
+
+function remove_if(arr, fn)
+    local index = nil
+    for i, v in ipairs(arr) do
+        if fn(v) then
+            index = i
+            break
+        end
+    end
+    if index then table.remove(arr, index) end
+end
+
+function scene_remove_clickable(id)
+    remove_if(scene.clickables, function(v) return v.id == id end)
+end
+
+function scene_remove_animation(id)
+    remove_if(scene.animations, function(v) return v.id == id end)
 end
 
 function scene_play(instant_dialog)
-    local ids = {}
+    local cl = #scene.clickables
     local go = true
     local text = nil
     local function cb()
         go = false
+        set_cursor(CURSOR_ARROW)
         return true
     end
     local clickcb = nil
-    if scene.dialog then
-        ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, cb)}
-        text = split(scene.dialog, "\n")
-    end
-    for _, c in ipairs(scene.clickables) do
+    local dialog_last_time = nil
+    local dialog_line = 1
+    local dialog_i = 1
+    ::add_callbacks::
+    local ids = {}
+    for i = 1, #scene.clickables do
+        local c = scene.clickables[#scene.clickables + 1 - i]
         ids[#ids + 1] = {EVENT_MOUSEMOTION, set_event_callback(EVENT_MOUSEMOTION, function(ev)
             if not c.hover_toggle and ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
                 c.hover_toggle = true
@@ -123,7 +163,9 @@ function scene_play(instant_dialog)
         end)}
         ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, function(ev)
             if ev.x >= c.x and ev.y >= c.y and c.x + c.w >= ev.x and c.y + c.h >= ev.y then
-                clickcb = c.callback
+                if c.halt_scene then clickcb = c.callback
+                else c.callback()
+                end
                 set_cursor(CURSOR_ARROW)
                 return true
             end
@@ -137,41 +179,81 @@ function scene_play(instant_dialog)
             return false
         end)}
     end
-    local dialog_last_time = nil
-    local dialog_line = 1
-    local dialog_i = 1
+    if scene.dialog then
+        ids[#ids + 1] = {EVENT_MOUSEBUTTONDOWN, set_event_callback(EVENT_MOUSEBUTTONDOWN, cb)}
+        ids[#ids + 1] = {EVENT_MOUSEBUTTONUP, set_event_callback(EVENT_MOUSEBUTTONUP, function()
+            set_cursor(CURSOR_HAND)
+            return true
+        end)}
+        ids[#ids + 1] = {EVENT_MOUSEMOTION, set_event_callback(EVENT_MOUSEMOTION, function()
+            set_cursor(CURSOR_HAND)
+            return true
+        end)}
+        text = split(scene.dialog, "\n")
+    end
     if instant_dialog then
         dialog_line = #text
         dialog_i = text[dialog_line]:len()
     end
+    local fuck = false
     while go do
         local min_sleep = 100000
         local start = nil
         draw_image(scene.background, 0, 0)
 
-        for _, v in ipairs(scene.images) do
-            draw_image(table.unpack(v))
-        end
-
         for _, v in ipairs(scene.animations) do
+            if v.z > 9 and text then
+                draw_rect(0xffffff80, 0, 300, 496, 68)
+                if not dialog_last_time or dialog_last_time + 1000 / 30 <= ticks() then
+                    if dialog_last_time then
+                        dialog_i = dialog_i + 1
+                        if dialog_i > text[dialog_line]:len() then
+                            dialog_line = dialog_line + 1
+                            if dialog_line > #text then dialog_line = #text
+                            else dialog_i = 1
+                            end
+                        end
+                    end
+                    dialog_last_time = ticks()
+                end
+                if not start or dialog_last_time > start then start = dialog_last_time end
+                if 1000 / 30 < min_sleep then min_sleep = 1000 / 30 end
+                for i=1, dialog_line do
+                    local s
+                    if i == dialog_line then s = text[i]:sub(1, dialog_i)
+                    else s = text[i]
+                    end
+                    draw_text(0x000000ff, 496 // 2 - text[i]:len() * 16 // 2, 310 + (i - 1) * 24, s)
+                end
+                fuck = true
+            end
+            if not v.animated then
+                draw_image(table.unpack(v.image))
+                goto continue
+            end
+            local next = false
             if not v.last_time or v.last_time + 1000 / v.fps <= ticks() then
-                if v.last_time then v.cur_frame = v.frames[v.cur_frame] end
+                if v.last_time then 
+                    v.cur_frame = v.frames[v.cur_frame]
+                    next = true
+                end
                 if not v.cur_frame then
                     go = false
-                    return
+                    goto fend
                 end
                 v.last_time = ticks()
             end
             if not start or v.last_time > start then start = v.last_time end
             if 1000 / v.fps < min_sleep then min_sleep = 1000 / v.fps end
             if type(v.image) == "function" then
-                v.image(v)
+                v.image(v, next)
             else
                 draw_image(v.image, image_w(v.image) // v.sheet_frames * ((v.cur_frame - v.start_frame) % v.anim_frames), 0, image_w(v.image) // v.sheet_frames, image_h(v.image), v.x, v.y)
             end
+            ::continue::
         end
 
-        if text then
+        if text and not fuck then
             draw_rect(0xffffff80, 0, 300, 496, 68)
             if not dialog_last_time or dialog_last_time + 1000 / 30 <= ticks() then
                 if dialog_last_time then
@@ -198,7 +280,16 @@ function scene_play(instant_dialog)
 
         present()
         if start then 
-            while go and ticks() - start < min_sleep do wait(math.ceil(min_sleep - (ticks() - start))) end
+            while go and ticks() - start < min_sleep do
+                wait(math.ceil(min_sleep - (ticks() - start)))
+                if cl ~= #scene.clickables then
+                    cl = #scene.clickables
+                    for _, v in ipairs(ids) do
+                        clear_event_callback(table.unpack(v))
+                    end
+                    goto add_callbacks
+                    end
+                end
         else
             wait()
         end
@@ -209,8 +300,16 @@ function scene_play(instant_dialog)
             go = true
         end
         if clickcb then break end
+        if cl ~= #scene.clickables then
+            cl = #scene.clickables
+            for _, v in ipairs(ids) do
+                clear_event_callback(table.unpack(v))
+            end
+            goto add_callbacks
+        end
     end
 
+    ::fend::
     for _, v in ipairs(ids) do
         clear_event_callback(table.unpack(v))
     end
@@ -219,11 +318,34 @@ function scene_play(instant_dialog)
 end
 
 function scene_clear()
-    scene.images = {}
-    scene.animations = {}
-    scene.clickables = {}
+    local a = {}
+    local c = {}
+    for _, v in ipairs(scene.animations) do
+        if v.perm then a[#a + 1] = v end
+    end
+    for _, v in ipairs(scene.clickables) do
+        if v.perm then c[#c + 1] = v end
+    end
+    scene.animations = a
+    scene.clickables = c
     scene.dialog = nil
 end
+scene_clear()
+
+local menu_button = load_image("menu-button.png")
+local menu = load_image("menu.png")
+scene_add_clickable_image(10, menu_button, 465, 10, function()
+    local i1 = scene_add_animation(function() draw_rect(0x00000030, 0, 0, 496, 368) end, 0, 0, 0, 0, 0, 1, {1}, 11, nil, true)
+    local i3 = scene_add_animation({menu, -5, -10}, nil, nil, nil, nil, nil, nil, nil, 12, true, true)
+    local i2
+    i2 = scene_add_clickable_rect(0, 0, 496, 368, function()
+        scene_remove_animation(i1)
+        scene_remove_clickable(i2)
+        scene_remove_animation(i3)
+        return true
+    end, hover_hand, true, true)
+    return true
+end, hover_hand, true, true)
 
 function dialog(text, instant)
     scene.dialog = text
