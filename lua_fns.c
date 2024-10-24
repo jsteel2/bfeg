@@ -167,12 +167,49 @@ static int l_set_font(lua_State *L)
     return 1;
 }
 
+static bool getfield_into(lua_State *L, char *key, int *value)
+{
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    bool r = lua_isinteger(L, -1);
+    *value = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    return r;
+}
+
+static int getfield_int(lua_State *L, char *key)
+{
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    int r = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    return r;
+}
+
+static const char *getfield_string(lua_State *L, char *key)
+{
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    const char *r = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    return r;
+}
+
+static void *getfield_userdata(lua_State *L, char *key)
+{
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    void *r = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    return r;
+}
+
 static int l_draw_text(lua_State *L)
 {
-    SDL_Color color = hex2col(lua_tointeger(L, 1));
-    SDL_Surface *s = TTF_RenderText_Blended(font, lua_tostring(L, 4), color);
+    SDL_Color color = hex2col(getfield_int(L, "color"));
+    SDL_Surface *s = TTF_RenderText_Blended(font, getfield_string(L, "text"), color);
     SDL_Texture *t = SDL_CreateTextureFromSurface(ren, s);
-    SDL_RenderCopy(ren, t, NULL, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = s->w, .h = s->h});
+    SDL_RenderCopy(ren, t, NULL, &(SDL_Rect){.x = getfield_int(L, "x"), .y = getfield_int(L, "y"), .w = s->w, .h = s->h});
     SDL_FreeSurface(s);
     SDL_DestroyTexture(t);
     return 0;
@@ -180,9 +217,9 @@ static int l_draw_text(lua_State *L)
 
 static int l_draw_rect(lua_State *L)
 {
-    SDL_Color color = hex2col(lua_tointeger(L, 1));
+    SDL_Color color = hex2col(getfield_int(L, "color"));
     SDL_SetRenderDrawColor(ren, color.r, color.g, color.b, color.a);
-    SDL_RenderFillRect(ren, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)});
+    SDL_RenderFillRect(ren, &(SDL_Rect){.x = getfield_int(L, "x"), .y = getfield_int(L, "y"), .w = getfield_int(L, "w"), .h = getfield_int(L, "h")});
     return 0;
 }
 
@@ -216,7 +253,7 @@ static int l_texture_gc(lua_State *L)
     return 0;
 }
 
-static int l_present(lua_State *L)
+static int l_render(lua_State *L)
 {
     SDL_RenderPresent(ren);
     return 0;
@@ -224,17 +261,21 @@ static int l_present(lua_State *L)
 
 static int l_draw_image(lua_State *L)
 {
-    if (lua_gettop(L) > 4)
+    SDL_Texture *t = *(SDL_Texture **)getfield_userdata(L, "img");
+    int w, h;
+    int srcx;
+    int destw, desth;
+    bool x;
+    if ((x = getfield_into(L, "srcx", &srcx)))
     {
-        SDL_RenderCopyEx(ren, *(SDL_Texture **)lua_touserdata(L, 1), &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)}, &(SDL_Rect){.x = lua_tointeger(L, 6), .y = lua_tointeger(L, 7), .w = lua_tointeger(L, 4), .h = lua_tointeger(L, 5)}, lua_gettop(L) > 7 ? lua_tointeger(L, 8) : 0, NULL, SDL_FLIP_NONE);
+        w = getfield_int(L, "w");
+        h = getfield_int(L, "h");
     }
     else
     {
-        SDL_Texture *t = *(SDL_Texture **)lua_touserdata(L, 1);
-        int w, h;
         SDL_QueryTexture(t, NULL, NULL, &w, &h);
-        SDL_RenderCopyEx(ren, t, NULL, &(SDL_Rect){.x = lua_tointeger(L, 2), .y = lua_tointeger(L, 3), .w = w, .h = h}, lua_gettop(L) > 3 ? lua_tointeger(L, 4) : 0, NULL, SDL_FLIP_NONE);
     }
+    SDL_RenderCopyEx(ren, t, x ? &(SDL_Rect){.x = srcx, .y = getfield_int(L, "srcy"), .w = w, .h = h} : NULL, &(SDL_Rect){.x = getfield_int(L, "x"), .y = getfield_int(L, "y"), .w = getfield_into(L, "destw", &destw) ? destw : w, .h = getfield_into(L, "desth", &desth) ? desth : h}, getfield_int(L, "degrees"), NULL, getfield_int(L, "flip"));
 
     return 0;
 }
@@ -339,8 +380,8 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
     lua_setglobal(L, "play_music");
     lua_pushcfunction(L, l_queue_music);
     lua_setglobal(L, "queue_music");
-    lua_pushcfunction(L, l_present);
-    lua_setglobal(L, "present");
+    lua_pushcfunction(L, l_render);
+    lua_setglobal(L, "render");
     lua_pushcfunction(L, l_draw_image);
     lua_setglobal(L, "draw_image");
     lua_pushcfunction(L, l_ticks);
