@@ -348,6 +348,53 @@ static int l_queue_music(lua_State *L)
     return 0;
 }
 
+static int l_stop_music(lua_State *L)
+{
+    Mix_HookMusicFinished(NULL);
+    Mix_HaltMusic();
+    return 0;
+}
+
+static int l_load_sound(lua_State *L)
+{
+    size_t size;
+    char *p = read_file(lua_tostring(L, 1), &size);
+    if (!p)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    SDL_RWops *rw = SDL_RWFromConstMem(p, size);
+    Mix_Chunk *chunk = Mix_LoadWAV_RW(rw, 1);
+
+    Mix_Chunk **x = lua_newuserdata(L, sizeof(Mix_Chunk *));
+    *x = chunk;
+    luaL_getmetatable(L, "LuaBook.load_sound");
+    lua_setmetatable(L, -2);
+
+    return 1;
+}
+
+static int l_chunk_gc(lua_State *L)
+{
+    Mix_Chunk *chunk = *(Mix_Chunk **)lua_touserdata(L, 1);
+    if (chunk) Mix_FreeChunk(chunk);
+    return 0;
+}
+
+static int l_play_sound(lua_State *L)
+{
+    lua_pushinteger(L, Mix_PlayChannel(-1, *(Mix_Chunk **)lua_touserdata(L, 1), lua_tointeger(L, 2)));
+    return 1;
+}
+
+static int l_stop_sound(lua_State *L)
+{
+    Mix_HaltChannel(lua_tointeger(L, 1));
+    return 0;
+}
+
 void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 {
     ren = r;
@@ -375,6 +422,21 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 
     lua_pushcfunction(L, l_load_image);
     lua_setglobal(L, "load_image");
+
+    luaL_newmetatable(L, "LuaBook.load_sound");
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, l_chunk_gc);
+    lua_settable(L, -3);
+
+    lua_pushcfunction(L, l_load_image);
+    lua_setglobal(L, "load_image");
+
+    lua_pushcfunction(L, l_stop_music);
+    lua_setglobal(L, "stop_music");
+    lua_pushcfunction(L, l_play_sound);
+    lua_setglobal(L, "play_sound");
+    lua_pushcfunction(L, l_stop_sound);
+    lua_setglobal(L, "stop_sound");
 
     lua_pushcfunction(L, l_play_music);
     lua_setglobal(L, "play_music");
