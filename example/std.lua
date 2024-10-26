@@ -8,7 +8,7 @@ scene = {
 function inventory_init(...)
     inventory = {}
     for _, v in ipairs{...} do
-        inventory[v.name] = {got = false, has = false, image=v.image}
+        inventory[v.name] = {got = false, has = false, image=v.image, desc=v.desc}
     end
 end
 
@@ -32,8 +32,16 @@ function handle_event(ev, data)
     if ev == EVENT_MOUSEMOTION then
         mouse.x = data.x
         mouse.y = data.y
+        scene.hovering = false
     end
     if not callbacks[ev] then return end
+    local r = {}
+    for i, v in ipairs(callbacks[ev]) do
+        if v.remove then r[#r + 1] = i end
+    end
+    for i, v in ipairs(r) do
+        table.remove(callbacks[ev], v - i + 1)
+    end
     for _, v in ipairs(callbacks[ev]) do
         if v.fn(data) then break end
     end
@@ -75,7 +83,7 @@ end
 function scene_remove_sprite(id)
     for i, x in ipairs(scene.sprites) do  
         if id == x.id then
-            table.remove(scene.sprites, i)
+            scene.sprites[i].remove = true
             return
         end
     end
@@ -85,7 +93,7 @@ function remove_event_callback(id)
     for i, x in pairs(callbacks) do
         for j, y in ipairs(x) do
             if id == y.id then
-                table.remove(x, j)
+                x[j].remove = true
                 if #x == 0 then callbacks[i] = nil end
                 return
             end
@@ -141,6 +149,7 @@ function scene_add_clickable_area(v)
     if mouse.x >= v.x and mouse.y >= v.y and mouse.x <= v.x + v.w and mouse.y <= v.y + v.h then
         set_cursor(CURSOR_HAND)
     end
+    local toggle = false
     local x = {
         callbacks = {
             add_event_callback(EVENT_MOUSEBUTTONDOWN, function(ev)
@@ -152,9 +161,13 @@ function scene_add_clickable_area(v)
             add_event_callback(EVENT_MOUSEMOTION, function(ev)
                 if ev.x >= v.x and ev.y >= v.y and ev.x <= v.x + v.w and ev.y <= v.y + v.h then
                     set_cursor(CURSOR_HAND)
-                    return true
+                    scene.hovering = true
+                    if v.hover and not toggle then v.hover(true) end
+                    toggle = true
                 else
-                    set_cursor(CURSOR_ARROW)
+                    if not scene.hovering then set_cursor(CURSOR_ARROW) end
+                    if v.hover and toggle then v.hover(false) end
+                    toggle = false
                 end
             end, v.z)
         },
@@ -170,6 +183,12 @@ end
 function scene_add_clickable_image(v)
     v.w = image_w(v.img)
     v.h = image_h(v.img)
+    local h
+    v.hover = v.hover_img and function(toggle)
+        if toggle then h = scene_add_image{img=v.hover_img, x=v.x, y=v.y, w=v.w, h=v.h, z=v.z + 1, clear=false}
+        else scene_remove_sprite(h) end
+        scene_draw()
+    end
     return scene_add_image(v), scene_add_clickable_area(v)
 end
 
@@ -194,6 +213,7 @@ function scene_remove_clickable_area(x)
 end
 
 function dialog(v)
+    if v.stop == nil then v.stop = true end
     local dialog_line = v.instant and #v or 1
     local dialog_i = v.instant and v[#v]:len() or 1
     local r = 1000 / 20
@@ -219,18 +239,21 @@ function dialog(v)
             draw_text{color=0x000000ff, x=496 // 2 - v[i]:len() * 16 // 2, y=310 + (i - 1) * 24, text=s}
         end
         return r
-    end, z=10}
-    local c = scene_add_clickable_area{x=0, y=0, w=496, h=368, cb=function()
+    end, z=v.z or 10}
+    local c
+    c = scene_add_clickable_area{x=0, y=0, w=496, h=368, cb=function()
         if dialog_line < #v or dialog_i <= v[dialog_line]:len() then
             dialog_line = #v
             dialog_i = v[dialog_line]:len()
         else
-            scene.playing = false
+            scene_remove_sprite(s)
+            scene_remove_clickable_area(c)
+            if v.stop then scene.playing = false
+            else scene_draw()
+            end
         end
-    end}
+    end, z=v.z}
     scene_play()
-    scene_remove_sprite(s)
-    scene_remove_clickable_area(c)
 end
 
 function scene_play()
@@ -250,6 +273,13 @@ end
 
 function scene_draw()
     local sleep_amt = math.huge
+    local r = {}
+    for i, v in ipairs(scene.sprites) do
+        if v.remove then r[#r + 1] = i end
+    end
+    for i, v in ipairs(r) do
+        table.remove(scene.sprites, v - i + 1)
+    end
     for _, sprite in ipairs(scene.sprites) do
         if not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick then sprite.last_tick = ticks() end
         local x = sprite.fn(sprite.next_tick and ticks() >= sprite.next_tick)
@@ -330,7 +360,9 @@ scene_add_clickable_image{img=load_image("menu-button.png"), x=465, y=10, clear=
     s[#s + 1] = scene_add_image{img=load_image("menu.png"), x=-5, y=-10, z=32, clear=false}
     local i = 0
     for _, v in pairs(inventory) do
-        s[#s + 1] = scene_add_image{img=v.has and v.image or empty_slot, x=75 + i * 60, y=230, z=33, clear=false}
+        s[#s + 1] = scene_add_clickable_image{cb=function()
+            if v.has then dialog{v.desc, instant=true, stop=false, z=34} end
+        end, img=v.has and v.image or empty_slot, x=75 + i * 60, y=230, z=33, clear=false}
         i = i + 1
     end
     c[#c + 1] = scene_add_clickable_area{x=0, y=0, w=496, h=368, z=31, clear=false, cb=function()
@@ -339,4 +371,4 @@ scene_add_clickable_image{img=load_image("menu-button.png"), x=465, y=10, clear=
         scene_draw()
     end}
     scene_draw()
-end, z=30}
+end, hover_img=load_image("menu-button-hover.png"), z=30}

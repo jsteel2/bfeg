@@ -1,6 +1,6 @@
 import("std.lua")
 
-inventory_init({name="ball", image=load_image("ball-inventory.png")})
+inventory_init({name="ball", image=load_image("ball-inventory.png"), desc="SEEMS LIKE A NORMAL BALL."})
 
 function intro()
     play_music("dream.mp3")
