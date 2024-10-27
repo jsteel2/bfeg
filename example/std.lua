@@ -192,6 +192,10 @@ function scene_add_clickable_image(v)
     return scene_add_image(v), scene_add_clickable_area(v)
 end
 
+function scene_add_clickable_sprite(v)
+    return scene_add_sprite(v), scene_add_clickable_area(v)
+end
+
 function scene_remove_clickable_area(x)
     for _, id in ipairs(x.callbacks) do
         remove_event_callback(id)
@@ -212,12 +216,15 @@ function scene_remove_clickable_area(x)
     if arrow then set_cursor(CURSOR_ARROW) end
 end
 
+local dialog_button = load_image("dialog-button.png")
 function dialog(v)
     if v.stop == nil then v.stop = true end
+    if v.dismiss == nil then v.dismiss = true end
     local dialog_line = v.instant and #v or 1
     local dialog_i = v.instant and v[#v]:len() or 1
     local r = 1000 / 20
-    local s = scene_add_sprite{fn=function(next)
+    local s = {}
+    s[#s + 1] = scene_add_sprite{fn=function(next)
         if next then
             dialog_i = dialog_i + 1
             if dialog_i > v[dialog_line]:len() then
@@ -230,30 +237,52 @@ function dialog(v)
                 end
             end
         end
-        draw_rect{color=0xffffff80, x=0, y=300, w=496, h=68}
+        draw_rect{color=0xffffff80, x=0, y=310, w=496, h=58}
         for i=1, dialog_line do
             local s
             if i == dialog_line then s = v[i]:sub(1, dialog_i)
             else s = v[i]
             end
-            draw_text{color=0x000000ff, x=496 // 2 - v[i]:len() * 16 // 2, y=310 + (i - 1) * 24, text=s}
+            draw_text{color=0x000000ff, x=496 // 2 - v[i]:len() * 16 // 2, y=320 + (i - 1) * 24, text=s}
         end
         return r
     end, z=v.z or 10}
-    local c
-    c = scene_add_clickable_area{x=0, y=0, w=496, h=368, cb=function()
-        if dialog_line < #v or dialog_i <= v[dialog_line]:len() then
-            dialog_line = #v
-            dialog_i = v[dialog_line]:len()
-        else
-            scene_remove_sprite(s)
-            scene_remove_clickable_area(c)
-            if v.stop then scene.playing = false
-            else scene_draw()
+    local c = {}
+    if v.dismiss then
+        c[#c + 1] = scene_add_clickable_area{x=0, y=0, w=496, h=368, cb=function()
+            if dialog_line < #v or dialog_i <= v[dialog_line]:len() then
+                dialog_line = #v
+                dialog_i = v[dialog_line]:len()
+            else
+                for _, v in ipairs(s) do scene_remove_sprite(v) end
+                for _, v in ipairs(c) do scene_remove_clickable_area(v) end
+                if v.stop then scene.playing = false
+                else scene_draw()
+                end
             end
+        end, z=v.z}
+    end
+    if v.options then
+        for i, d in ipairs(v.options) do
+            local x = 100 + (i - 1) * 200
+            local y = 340
+            local w = image_w(dialog_button)
+            local h = image_h(dialog_button)
+            local toggle = false
+            s[#s + 1], c[#c + 1] = scene_add_clickable_sprite{fn=function()
+                draw_image{img=dialog_button, x=x, y=y}
+                draw_text{color=toggle and 0xffffffff or 0x333333ff, x=x + w - w // 2 - d[1]:len() * 16 // 2, y=y + h - h // 2 - 10, text=d[1]}
+            end, hover=function(t)
+                toggle = t
+                scene_draw()
+            end, cb=switch_scene(function()
+                for _, v in ipairs(s) do scene_remove_sprite(v) end
+                for _, v in ipairs(c) do scene_remove_clickable_area(v) end
+                return d[2]()
+            end), x=x, y=y, z=(v.z or 10) + 1, w=w, h=h}
         end
-    end, z=v.z}
-    scene_play()
+    end
+    return scene_play()
 end
 
 function scene_play()
@@ -360,7 +389,7 @@ scene_add_clickable_image{img=load_image("menu-button.png"), x=465, y=10, clear=
     s[#s + 1] = scene_add_image{img=load_image("menu.png"), x=-5, y=-10, z=32, clear=false}
     local i = 0
     for _, v in pairs(inventory) do
-        s[#s + 1] = scene_add_clickable_image{cb=function()
+        s[#s + 1], c[#c + 1] = scene_add_clickable_image{cb=function()
             if v.has then dialog{v.desc, instant=true, stop=false, z=34} end
         end, img=v.has and v.image or empty_slot, x=75 + i * 60, y=230, z=33, clear=false}
         i = i + 1

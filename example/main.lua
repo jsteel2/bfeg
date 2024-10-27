@@ -138,14 +138,22 @@ function scene6()
     scene_add_arrow(DOWN, 220, 315, scene5)
     scene_add_clickable_area{x=70, y=40, w=320, h=250, cb=switch_scene(function()
         scene_clear()
-        dialog{'"#SAVEDERPY"', "COOL GRAFFITI.", instant=true}
         derpy_knocks = derpy_knocks + 1
-        if derpy_knocks > 1 then
+        if derpy_knocks <= 2 then dialog{'"#SAVEDERPY"', "COOL GRAFFITI.", instant=true} end
+        if derpy_knocks == 2 then
             dialog{"[METALLIC KNOCKING]", instant=true}
+        elseif derpy_knocks > 2 then
+            dialog{"OH SHIT SOMEONE'S", "STUCK IN THERE!!!1", instant=true}
+            return dialog{"TRY TO KICK THE PONY OUT?", options={{"YES!", derpy}, {"NO!", scene6}}, instant=true, dismiss=false}
         end
         return scene6()
     end)}
     return scene_play()
+end
+
+function derpy()
+    scene_clear()
+    dialog{"hrrrr"}
 end
 
 intro()
