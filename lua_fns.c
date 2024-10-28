@@ -395,6 +395,14 @@ static int l_stop_sound(lua_State *L)
     return 0;
 }
 
+static int l_set_volume(lua_State *L)
+{
+    int v = lua_tointeger(L, 1);
+    Mix_VolumeMusic(v);
+    Mix_Volume(-1, v);
+    return 0;
+}
+
 void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
 {
     ren = r;
@@ -431,8 +439,8 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
     lua_pushcfunction(L, l_load_image);
     lua_setglobal(L, "load_image");
 
-    lua_pushcfunction(L, l_stop_music);
-    lua_setglobal(L, "stop_music");
+    lua_pushcfunction(L, l_set_volume);
+    lua_setglobal(L, "set_volume");
     lua_pushcfunction(L, l_play_sound);
     lua_setglobal(L, "play_sound");
     lua_pushcfunction(L, l_stop_sound);

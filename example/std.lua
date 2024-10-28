@@ -12,6 +12,11 @@ function inventory_init(...)
     end
 end
 
+day = 1
+form_unknown = load_image("form-unknown.png")
+form_earth = load_image("form-earth.png")
+form = form_unknown
+
 local global_id = 1
 local callbacks = {}
 local mouse = {
@@ -69,20 +74,22 @@ end
 function scene_add_sprite(v)
     if not v.z then v.z = 2 end
     if v.clear == nil then v.clear = true end
-    scene.sprites[#scene.sprites + 1] = {
+    local x = {
         fn = v.fn,
         clear = v.clear,
         z = v.z,
-        id = global_id
+        id = global_id,
+        v = v.v
     }
+    scene.sprites[#scene.sprites + 1] = x 
     table.sort(scene.sprites, function(l, r) return l.z < r.z end)
     global_id = global_id + 1
-    return global_id - 1
+    return x
 end
 
-function scene_remove_sprite(id)
+function scene_remove_sprite(s)
     for i, x in ipairs(scene.sprites) do  
-        if id == x.id then
+        if s.id == x.id then
             scene.sprites[i].remove = true
             return
         end
@@ -120,7 +127,9 @@ function scene_add_animation(v)
         local r = 1000 / v.fps
         if not anim_last_tick then anim_last_tick = ticks() end
         if anim_next_tick and ticks() >= anim_next_tick then
-            cur_frame = v.frames[cur_frame]
+            if not v.frames[cur_frame] then scene.playing = false
+            else cur_frame = v.frames[cur_frame]
+            end
             if type(cur_frame) == "function" then
                 cur_frame = cur_frame()
             end
@@ -133,9 +142,11 @@ function scene_add_animation(v)
 end
 
 function scene_add_image(v)
-    return scene_add_sprite{fn=function(next)
-        draw_image(v)
-    end, z=v.z, clear=v.clear}
+    local s
+    s = scene_add_sprite{fn=function(next)
+        draw_image(s.v)
+    end, z=v.z, clear=v.clear, v=v}
+    return s
 end
 
 local bg = nil
@@ -183,13 +194,21 @@ end
 function scene_add_clickable_image(v)
     v.w = image_w(v.img)
     v.h = image_h(v.img)
-    local h
-    v.hover = v.hover_img and function(toggle)
-        if toggle then h = scene_add_image{img=v.hover_img, x=v.x, y=v.y, w=v.w, h=v.h, z=v.z + 1, clear=false}
-        else scene_remove_sprite(h) end
+    local toggle = false
+    local s
+    v.fn = function()
+        local i = v.img
+        v.img = toggle and v.hover_img or v.img
+        draw_image(v)
+        v.img = i
+    end
+    v.hover = v.hover_img and function(t)
+        toggle = t
         scene_draw()
     end
-    return scene_add_image(v), scene_add_clickable_area(v)
+    v.v = v
+    s = scene_add_sprite(v)
+    return s, scene_add_clickable_area(v)
 end
 
 function scene_add_clickable_sprite(v)
@@ -380,21 +399,41 @@ function scene_add_item(v)
 end
 
 local empty_slot = load_image("empty-inventory.png")
+local muted = false
 scene_add_clickable_image{img=load_image("menu-button.png"), x=465, y=10, clear=false, cb=function()
     local s = {}
     local c = {}
+    local menu = load_image("menu.png")
     s[#s + 1] = scene_add_sprite{fn=function()
         draw_rect{color=0x00000030, x=0, y=0, w=496, h=368}
-    end, z=31, clear=false}
-    s[#s + 1] = scene_add_image{img=load_image("menu.png"), x=-5, y=-10, z=32, clear=false}
+        draw_image{img=menu, x=-5, y=-10}
+        draw_text{color=0xffffffff, x=30, y=30, text="DAY " .. day}
+        draw_text{color=0xffffffff, x=350, y=30, text="FORM:"}
+        draw_image{img=form, x=330, y=70}
+    end, z=32, clear=false}
     local i = 0
+    local m
+    m , c[#c + 1] = scene_add_clickable_image{cb=function()
+        muted = not muted
+        if muted then
+            set_volume(0)
+            m.v.img = load_image("muted-button.png")
+            m.v.hover_img = load_image("muted-button-hover.png")
+        else
+            set_volume(128)
+            m.v.img = load_image("unmuted-button.png")
+            m.v.hover_img = load_image("unmuted-button-hover.png")
+        end
+        scene_draw()
+    end, img=load_image(muted and "muted-button.png" or "unmuted-button.png"), hover_img=load_image(muted and "muted-button-hover.png" or "unmuted-button-hover.png"), x=430, y=60, clear=false, z=33}
+    s[#s + 1] = m
     for _, v in pairs(inventory) do
         s[#s + 1], c[#c + 1] = scene_add_clickable_image{cb=function()
-            if v.has then dialog{v.desc, instant=true, stop=false, z=34} end
-        end, img=v.has and v.image or empty_slot, x=75 + i * 60, y=230, z=33, clear=false}
+            if v.has then dialog{v.desc, instant=true, stop=false, z=35} end
+        end, img=v.has and v.image or empty_slot, x=75 + i * 60, y=230, z=34, clear=false}
         i = i + 1
     end
-    c[#c + 1] = scene_add_clickable_area{x=0, y=0, w=496, h=368, z=31, clear=false, cb=function()
+    c[#c + 1] = scene_add_clickable_area{x=0, y=0, w=496, h=368, z=32, clear=false, cb=function()
         for _, v in ipairs(s) do scene_remove_sprite(v) end
         for _, v in ipairs(c) do scene_remove_clickable_area(v) end
         scene_draw()

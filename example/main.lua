@@ -38,6 +38,7 @@ function intro()
         if alpha ~= 0xff then return 1000 / 30 end
     end, z=5}
     dialog{"AFTER THAT, YOU'LL TURN BACK", "TO HUMAN. HAVE A GOOD TIME."}
+    form = form_earth
     play_music("main_theme_start.mp3", 1)
     queue_music("main_theme.mp3")
     scene_clear()
@@ -49,35 +50,23 @@ function intro()
     end, z=5, clear=false}
     scene_set_background(load_image("ground.png"))
     scene_add_image{img=load_image("hooves.png"), x=100, y=0}
-    scene_add_animation{sheet=load_image("hooves-magic.png"), sheet_size=9, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, function()
-        scene.playing = false
-        return 9
-    end}}
+    scene_add_animation{sheet=load_image("hooves-magic.png"), sheet_size=9, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, nil}}
     scene_play()
     scene_clear()
     alpha = 0xff
     scene_set_background(load_image("bg2.png"))
-    scene_add_animation{sheet=load_image("rumpa.png"), sheet_size=9, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, function()
-        scene.playing = false
-        return 9
-    end}}
+    scene_add_animation{sheet=load_image("rumpa.png"), sheet_size=9, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, nil}}
     scene_play()
     scene_clear()
     alpha = 0xff
     scene_set_background(load_image("ground.png"))
     scene_add_image{img=load_image("hooves2.png"), x=100, y=0}
-    scene_add_animation{sheet=load_image("tail.png"), sheet_size=5, fps=14, x=0, y=0, frames={2, 3, 4, 5, function()
-        scene.playing = false
-        return 5
-    end}}
+    scene_add_animation{sheet=load_image("tail.png"), sheet_size=5, fps=14, x=0, y=0, frames={2, 3, 4, 5, nil}}
     scene_play()
     scene_clear()
     alpha = 0xff
     scene_set_background(load_image("bg3.png"))
-    scene_add_animation{sheet=load_image("brian.png"), sheet_size=15, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, function()
-        scene.playing = false
-        return 15
-    end}}
+    scene_add_animation{sheet=load_image("brian.png"), sheet_size=15, fps=14, x=0, y=0, frames={2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, nil}}
     scene_play()
     scene_remove_sprite(reveal)
     scene_clear()
