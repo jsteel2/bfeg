@@ -141,8 +141,32 @@ function scene6()
 end
 
 function derpy()
-    scene_clear()
-    dialog{"hrrrr"}
+    return sex{
+    {img=load_image("derpy-button-1.png"), hover_img=load_image("derpy-button-1-hover.png"), fn=function()
+        scene_add_sprite{fn=function()
+            draw_text{color=0xffffffff, x=200, y=200, text="ANIM 1"}
+        end}
+    end, rate=1000 / 2},
+    {img=load_image("derpy-button-2.png"), hover_img=load_image("derpy-button-2-hover.png"), fn=function()
+        scene_add_sprite{fn=function()
+            draw_text{color=0xffffffff, x=200, y=200, text="ANIM 2"}
+        end}
+    end, rate=1000 / 4},
+    {img=load_image("derpy-button-3.png"), hover_img=load_image("derpy-button-3-hover.png"), fn=function()
+        scene_add_sprite{fn=function()
+            draw_text{color=0xffffffff, x=200, y=200, text="ANIM 3"}
+        end}
+    end, rate=1000 / 6},
+    {img=load_image("derpy-button-4.png"), hover_img=load_image("derpy-button-4-hover.png"), fn=function()
+        scene_add_sprite{fn=function()
+            draw_text{color=0xffffffff, x=200, y=200, text="ANIM 4"}
+        end}
+    end, rate=1000 / 8},
+    nut={img=load_image("derpy-button-nut.png"), hover_img=load_image("derpy-button-nut-hover.png"), fn=function()
+        scene_add_sprite{fn=function()
+            draw_text{color=0xffffffff, x=200, y=200, text="holy fuck im cumming"}
+        end}
+    end}}
 end
 
 intro()

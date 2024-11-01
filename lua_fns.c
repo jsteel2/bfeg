@@ -266,15 +266,9 @@ static int l_draw_image(lua_State *L)
     int srcx;
     int destw, desth;
     bool x;
-    if ((x = getfield_into(L, "srcx", &srcx)))
-    {
-        w = getfield_int(L, "w");
-        h = getfield_int(L, "h");
-    }
-    else
-    {
-        SDL_QueryTexture(t, NULL, NULL, &w, &h);
-    }
+    x = getfield_into(L, "srcx", &srcx);
+    if (!getfield_into(L, "w", &w)) SDL_QueryTexture(t, NULL, NULL, &w, NULL);
+    if (!getfield_into(L, "h", &h)) SDL_QueryTexture(t, NULL, NULL, NULL, &h);
     SDL_RenderCopyEx(ren, t, x ? &(SDL_Rect){.x = srcx, .y = getfield_int(L, "srcy"), .w = w, .h = h} : NULL, &(SDL_Rect){.x = getfield_int(L, "x"), .y = getfield_int(L, "y"), .w = getfield_into(L, "destw", &destw) ? destw : w, .h = getfield_into(L, "desth", &desth) ? desth : h}, getfield_int(L, "degrees"), NULL, getfield_int(L, "flip"));
 
     return 0;

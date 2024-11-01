@@ -195,7 +195,6 @@ function scene_add_clickable_image(v)
     v.w = image_w(v.img)
     v.h = image_h(v.img)
     local toggle = false
-    local s
     v.fn = function()
         local i = v.img
         v.img = toggle and v.hover_img or v.img
@@ -207,8 +206,7 @@ function scene_add_clickable_image(v)
         scene_draw()
     end
     v.v = v
-    s = scene_add_sprite(v)
-    return s, scene_add_clickable_area(v)
+    return scene_add_sprite(v), scene_add_clickable_area(v)
 end
 
 function scene_add_clickable_sprite(v)
@@ -396,6 +394,29 @@ function scene_add_item(v)
         dialog{"YOU GOT:", v.name, instant=true}
         return v.next()
     end), x=v.x, y=v.y, img=v.img}
+end
+
+function sex(x)
+    local bar = 0
+    local rate = x[1].rate
+    scene_clear()
+    for i, v in ipairs(x) do
+        scene_add_clickable_image{img=v.img, hover_img=v.hover_img, x=20 + (i - 1) * 50, y=20, z=10, clear=false, cb=switch_scene(function()
+            scene_clear()
+            rate = v.rate
+            v.fn()
+            return scene_play()
+        end)}
+        if i == 1 then v.fn() end
+    end
+    local b = load_image("derpy-bar-inside.png")
+    scene_add_sprite{fn=function()
+        bar = math.min(100, bar + 1)
+        draw_image{img=b, x=304, y=23, w=bar}
+        return rate
+    end, z=10, clear=false}
+    scene_add_image{img=load_image("derpy-bar-outside.png"), x=300, y=20, z=11, clear=false}
+    scene_play()
 end
 
 local empty_slot = load_image("empty-inventory.png")
