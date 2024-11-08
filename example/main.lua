@@ -141,7 +141,7 @@ function scene6()
 end
 
 function derpy()
-    return sex{
+    sex{
     {img=load_image("derpy-button-1.png"), hover_img=load_image("derpy-button-1-hover.png"), fn=function()
         scene_add_sprite{fn=function()
             draw_text{color=0xffffffff, x=200, y=200, text="ANIM 1"}
@@ -163,10 +163,13 @@ function derpy()
         end}
     end, rate=1000 / 8},
     nut={img=load_image("derpy-button-nut.png"), hover_img=load_image("derpy-button-nut-hover.png"), fn=function()
-        scene_add_sprite{fn=function()
-            draw_text{color=0xffffffff, x=200, y=200, text="holy fuck im cumming"}
+        scene_add_sprite{fn=function(next)
+            if next then scene.playing = false end
+            draw_text{color=0xffffffff, x=100, y=200, text="holy fuck im cumming"}
+            return 3000
         end}
     end}}
+    return scene1()
 end
 
 intro()

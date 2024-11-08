@@ -71,6 +71,7 @@ function add_event_callback(ev, fn, z)
     return global_id - 1
 end
 
+local scene_changed = false
 function scene_add_sprite(v)
     if not v.z then v.z = 2 end
     if v.clear == nil then v.clear = true end
@@ -84,6 +85,7 @@ function scene_add_sprite(v)
     scene.sprites[#scene.sprites + 1] = x 
     table.sort(scene.sprites, function(l, r) return l.z < r.z end)
     global_id = global_id + 1
+    scene_changed = true
     return x
 end
 
@@ -91,6 +93,7 @@ function scene_remove_sprite(s)
     for i, x in ipairs(scene.sprites) do  
         if s.id == x.id then
             scene.sprites[i].remove = true
+            scene_changed = true
             return
         end
     end
@@ -318,7 +321,7 @@ function scene_play()
 end
 
 function scene_draw()
-    local p = false
+    local s = false
     local r = {}
     for i, v in ipairs(scene.sprites) do
         if v.remove then r[#r + 1] = i end
@@ -329,16 +332,21 @@ function scene_draw()
     for _, sprite in ipairs(scene.sprites) do
         if not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick then
             sprite.last_tick = ticks()
-            p = true
         end
         local x = sprite.fn(sprite.next_tick and ticks() >= sprite.next_tick)
-        if not x then goto continue end
-        p = true
-        sprite.next_tick = sprite.last_tick + x
-    ::continue::
+        if x then
+            s = true
+            sprite.next_tick = sprite.last_tick + x
+        else
+            sprite.next_tick = nil
+        end
+        if scene_changed then
+            scene_changed = false
+            return scene_draw()
+        end
     end
-    if p then present() end
-    return p
+    present()
+    return s
 end
 
 function zoom(v, times)
@@ -401,9 +409,11 @@ end
 function sex(x)
     local bar = 0
     local rate = x[1].rate
+    local s = {}
+    local c = {}
     scene_clear()
     for i, v in ipairs(x) do
-        scene_add_clickable_image{img=v.img, hover_img=v.hover_img, x=20 + (i - 1) * 50, y=20, z=10, clear=false, cb=switch_scene(function()
+        s[#s + 1], c[#c + 1] = scene_add_clickable_image{img=v.img, hover_img=v.hover_img, x=20 + (i - 1) * 50, y=20, z=10, clear=false, cb=switch_scene(function()
             scene_clear()
             rate = v.rate
             v.fn()
@@ -412,13 +422,22 @@ function sex(x)
         if i == 1 then v.fn() end
     end
     local b = load_image("derpy-bar-inside.png")
-    scene_add_sprite{fn=function(next)
+    s[#s + 1] = scene_add_sprite{fn=function(next)
         if next then bar = math.min(100, bar + 1) end
+        if next and bar == 100 then
+            s[#s + 1], c[#c + 1] = scene_add_clickable_image{img=x.nut.img, hover_img=x.nut.hover_img, x=20 + #x * 50, y=20, z=10, clear=false, cb=switch_scene(function()
+                scene_clear()
+                x.nut.fn()
+                return scene_play()
+            end)}
+        end
         draw_image{img=b, x=304, y=23, w=bar}
-        return rate
+        return bar < 100 and rate or nil
     end, z=10, clear=false}
-    scene_add_image{img=load_image("derpy-bar-outside.png"), x=300, y=20, z=11, clear=false}
+    s[#s + 1] = scene_add_image{img=load_image("derpy-bar-outside.png"), x=300, y=20, z=11, clear=false}
     scene_play()
+    for _, v in ipairs(s) do scene_remove_sprite(v) end
+    for _, v in ipairs(c) do scene_remove_clickable_area(v) end
 end
 
 local empty_slot = load_image("empty-inventory.png")
