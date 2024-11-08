@@ -308,9 +308,9 @@ function scene_play()
     while scene.playing do
         local t = ticks()
         local s = scene_draw()
-        while scene.playing and ticks() - t < s do
-            if s == math.huge then wait()
-            else wait(s - (ticks() - t))
+        while scene.playing and ticks() - t < 1000 / 30 do
+            if not s then wait()
+            else wait(1000 / 30 - (ticks() - t))
             end
         end
     end
@@ -318,7 +318,7 @@ function scene_play()
 end
 
 function scene_draw()
-    local sleep_amt = math.huge
+    local p = false
     local r = {}
     for i, v in ipairs(scene.sprites) do
         if v.remove then r[#r + 1] = i end
@@ -327,16 +327,18 @@ function scene_draw()
         table.remove(scene.sprites, v - i + 1)
     end
     for _, sprite in ipairs(scene.sprites) do
-        if not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick then sprite.last_tick = ticks() end
+        if not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick then
+            sprite.last_tick = ticks()
+            p = true
+        end
         local x = sprite.fn(sprite.next_tick and ticks() >= sprite.next_tick)
         if not x then goto continue end
+        p = true
         sprite.next_tick = sprite.last_tick + x
-        local next = x - (ticks() - sprite.last_tick)
-        if next < sleep_amt then sleep_amt = next end
     ::continue::
     end
-    present()
-    return math.ceil(sleep_amt)
+    if p then present() end
+    return p
 end
 
 function zoom(v, times)
@@ -410,8 +412,8 @@ function sex(x)
         if i == 1 then v.fn() end
     end
     local b = load_image("derpy-bar-inside.png")
-    scene_add_sprite{fn=function()
-        bar = math.min(100, bar + 1)
+    scene_add_sprite{fn=function(next)
+        if next then bar = math.min(100, bar + 1) end
         draw_image{img=b, x=304, y=23, w=bar}
         return rate
     end, z=10, clear=false}
