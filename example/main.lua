@@ -168,7 +168,8 @@ function derpy()
             draw_text{color=0xffffffff, x=100, y=200, text="holy fuck im cumming"}
             return 3000
         end}
-    end}}
+    end},
+    bar={inside=load_image("derpy-bar-inside.png"), outside=load_image("derpy-bar-outside.png")}}
     return scene1()
 end
 

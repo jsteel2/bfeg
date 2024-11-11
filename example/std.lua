@@ -421,7 +421,6 @@ function sex(x)
         end)}
         if i == 1 then v.fn() end
     end
-    local b = load_image("derpy-bar-inside.png")
     s[#s + 1] = scene_add_sprite{fn=function(next)
         if next then bar = math.min(100, bar + 1) end
         if next and bar == 100 then
@@ -431,10 +430,10 @@ function sex(x)
                 return scene_play()
             end)}
         end
-        draw_image{img=b, x=304, y=23, w=bar}
+        draw_image{img=x.bar.inside, x=304, y=23, w=bar}
         return bar < 100 and rate or nil
     end, z=10, clear=false}
-    s[#s + 1] = scene_add_image{img=load_image("derpy-bar-outside.png"), x=300, y=20, z=11, clear=false}
+    s[#s + 1] = scene_add_image{img=x.bar.outside, x=300, y=20, z=11, clear=false}
     scene_play()
     for _, v in ipairs(s) do scene_remove_sprite(v) end
     for _, v in ipairs(c) do scene_remove_clickable_area(v) end
