@@ -317,7 +317,7 @@ function scene_play()
         local s = scene_draw()
         while scene.playing and ticks() - t < 1000 / 30 do
             if not s then wait()
-            else wait(1000 / 30 - (ticks() - t))
+            else wait(math.ceil(1000 / 30 - (ticks() - t)))
             end
         end
     end
