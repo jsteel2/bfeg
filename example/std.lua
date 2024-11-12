@@ -164,6 +164,19 @@ function scene_add_clickable_area(v)
         set_cursor(CURSOR_HAND)
     end
     local toggle = false
+    local function mouse_event(ev)
+        if ev.x >= v.x and ev.y >= v.y and ev.x <= v.x + v.w and ev.y <= v.y + v.h then
+            set_cursor(CURSOR_HAND)
+            scene.hovering = true
+            if v.hover and not toggle then v.hover(true) end
+            toggle = true
+        else
+            if not scene.hovering then set_cursor(CURSOR_ARROW) end
+            if v.hover and toggle then v.hover(false) end
+            toggle = false
+        end
+    end
+    mouse_event(mouse)
     local x = {
         callbacks = {
             add_event_callback(EVENT_MOUSEBUTTONDOWN, function(ev)
@@ -172,18 +185,8 @@ function scene_add_clickable_area(v)
                     return true
                 end
             end, v.z),
-            add_event_callback(EVENT_MOUSEMOTION, function(ev)
-                if ev.x >= v.x and ev.y >= v.y and ev.x <= v.x + v.w and ev.y <= v.y + v.h then
-                    set_cursor(CURSOR_HAND)
-                    scene.hovering = true
-                    if v.hover and not toggle then v.hover(true) end
-                    toggle = true
-                else
-                    if not scene.hovering then set_cursor(CURSOR_ARROW) end
-                    if v.hover and toggle then v.hover(false) end
-                    toggle = false
-                end
-            end, v.z)
+            add_event_callback(EVENT_MOUSEBUTTONUP, mouse_event, v.z),
+            add_event_callback(EVENT_MOUSEMOTION, mouse_event, v.z)
         },
         area = v,
         clear = v.clear == nil and true or v.clear,
@@ -200,6 +203,7 @@ function scene_add_clickable_image(v)
     local toggle = false
     v.fn = function()
         local i = v.img
+        if v.hover_keep and toggle then draw_image(v) end
         v.img = toggle and v.hover_img or v.img
         draw_image(v)
         v.img = i
@@ -382,6 +386,7 @@ DOWN = 90
 LEFT = 180
 UP = 270
 local arrow = load_image("arrow.png")
+local arrow_hover = load_image("arrow-hover.png")
 
 function switch_scene(next)
     return function()
@@ -391,7 +396,7 @@ function switch_scene(next)
 end
 
 function scene_add_arrow(rotation, x, y, next_scene)
-    scene_add_clickable_image{img=arrow, x=x, y=y, z=5, cb=switch_scene(next_scene), degrees=rotation}
+    scene_add_clickable_image{img=arrow, hover_img=arrow_hover, hover_keep=true, x=x, y=y, z=5, cb=switch_scene(next_scene), degrees=rotation}
 end
 
 function scene_add_item(v)
