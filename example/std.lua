@@ -124,23 +124,33 @@ function scene_add_animation(v)
         end
         draw_image(a)
     end
-    local anim_last_tick = nil
     local anim_next_tick = nil
     return scene_add_sprite{fn=function(next)
         local r = 1000 / v.fps
-        if not anim_last_tick then anim_last_tick = ticks() end
         if anim_next_tick and ticks() >= anim_next_tick then
             if not v.frames[cur_frame] then scene.playing = false
             else cur_frame = v.frames[cur_frame]
             end
+            if type(cur_frame) == "table" then
+                r = cur_frame[1]
+                cur_frame = cur_frame[2]
+            end
             if type(cur_frame) == "function" then
                 cur_frame = cur_frame()
             end
-            anim_last_tick = ticks()
+            anim_next_tick = ticks() + r
         end
-        anim_next_tick = anim_last_tick + r
-        if v.fn then r = v.fn(next, draw, v) else draw() end
-        return r or (1000 / v.fps)
+        if not anim_next_tick then
+            if type(cur_frame) == "table" then
+                r = cur_frame[1]
+                cur_frame = cur_frame[2]
+                start_frame = cur_frame
+            end
+            anim_next_tick = ticks() + r
+        end
+        local r2 = r
+        if v.fn then r2 = v.fn(next, draw, v) or r else draw() end
+        return r2
     end, table.unpack(v)}
 end
 

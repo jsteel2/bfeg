@@ -21,7 +21,7 @@ function intro()
         if next then zoom_p = zoom_p - 0.025 end
         if zoom_p < 1 then zoom_p = 1 end
         draw(zoom(v, zoom_p))
-        return zoom_p == 1 and (1000 / 10) or (1000 / 30)
+        return zoom_p ~= 1 and (1000 / 30)
     end, sheet=load_image("trixie1.png"), sheet_size=4, fps=10, x=100, y=0, frames={2, 3, 5, 6, 4, 1}}
     dialog{"HEY, HEY!!! ARE YOU ASLEEP?", "C'MON! ANSWER THE GREAT TRIXIE!"}
     scene_clear()
@@ -80,7 +80,7 @@ end
 function scene1()
     scene_clear()
     scene_set_background(load_image("bg4.png"))
-    scene_add_animation{sheet=load_image("trixie-lay.png"), sheet_size=3, fps=7, x=300, y=225, frames={4, [4]=7, [7]=10, [10]=13, [13]=16, [16]=19, [19]=22, [22]=25, [25]=28, [28]=31, [31]=3, [3]=2, [2]=6, [6]=1}}
+    scene_add_animation{sheet=load_image("trixie-lay.png"), sheet_size=3, fps=7, x=300, y=225, start_frame={3000, 1}, frames={3, 6, 2, [6]={3000, 1}}}
     scene_add_arrow(RIGHT, 445, 315, scene2)
     scene_add_arrow(LEFT, 0, 315, scene4)
     scene_add_arrow(UP, 220, 215, scene5)
