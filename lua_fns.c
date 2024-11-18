@@ -430,8 +430,8 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
     lua_pushcfunction(L, l_chunk_gc);
     lua_settable(L, -3);
 
-    lua_pushcfunction(L, l_load_image);
-    lua_setglobal(L, "load_image");
+    lua_pushcfunction(L, l_load_sound);
+    lua_setglobal(L, "load_sound");
 
     lua_pushcfunction(L, l_set_volume);
     lua_setglobal(L, "set_volume");
