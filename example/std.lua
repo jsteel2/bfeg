@@ -267,6 +267,7 @@ function dialog(v)
     local r = 1000 / 20
     local s = {}
     local c = {}
+    local buttons = false
     s[#s + 1] = scene_add_sprite{fn=function(next)
         if next then
             dialog_i = dialog_i + 1
@@ -280,7 +281,8 @@ function dialog(v)
                 end
             end
         end
-        if v.options and dialog_line == #v and dialog_i == v[dialog_line]:len() then
+        if not buttons and v.options and dialog_line == #v and dialog_i == v[dialog_line]:len() then
+            buttons = false
             for i, d in ipairs(v.options) do
                 local x = 100 + (i - 1) * 200
                 local y = 340
@@ -299,7 +301,6 @@ function dialog(v)
                     return d[2]()
                 end), x=x, y=y, z=(v.z or 10) + 1, w=w, h=h}
             end
-            v.options = nil
             scene_draw()
             return r
         end
