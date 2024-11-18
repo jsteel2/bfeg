@@ -282,7 +282,7 @@ function dialog(v)
             end
         end
         if not buttons and v.options and dialog_line == #v and dialog_i == v[dialog_line]:len() then
-            buttons = false
+            buttons = true
             for i, d in ipairs(v.options) do
                 local x = 100 + (i - 1) * 200
                 local y = 340
