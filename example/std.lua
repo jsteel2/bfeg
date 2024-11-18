@@ -15,6 +15,8 @@ end
 day = 1
 form_unknown = load_image("form-unknown.png")
 form_earth = load_image("form-earth.png")
+form_unicorn = load_image("form-unicorn.png")
+form_pegasus = load_image("form-pegasus.png")
 form = form_unknown
 
 local global_id = 1
@@ -226,6 +228,10 @@ function scene_add_clickable_image(v)
     return scene_add_sprite(v), scene_add_clickable_area(v)
 end
 
+function scene_add_clickable_animation(v)
+    return scene_add_animation(v), scene_add_clickable_area{x=v.x, y=v.y, w=image_w(v.sheet) // v.sheet_size, h=image_h(v.sheet), cb=v.cb}
+end
+
 function scene_add_clickable_sprite(v)
     return scene_add_sprite(v), scene_add_clickable_area(v)
 end
@@ -258,6 +264,7 @@ function dialog(v)
     local dialog_i = v.instant and v[#v]:len() or 1
     local r = 1000 / 20
     local s = {}
+    local c = {}
     s[#s + 1] = scene_add_sprite{fn=function(next)
         if next then
             dialog_i = dialog_i + 1
@@ -271,6 +278,29 @@ function dialog(v)
                 end
             end
         end
+        if v.options and dialog_line == #v and dialog_i == v[dialog_line]:len() then
+            for i, d in ipairs(v.options) do
+                local x = 100 + (i - 1) * 200
+                local y = 340
+                local w = image_w(dialog_button)
+                local h = image_h(dialog_button)
+                local toggle = false
+                s[#s + 1], c[#c + 1] = scene_add_clickable_sprite{fn=function()
+                    draw_image{img=dialog_button, x=x, y=y}
+                    draw_text{color=toggle and 0xffffffff or 0x333333ff, x=x + w - w // 2 - d[1]:len() * 16 // 2, y=y + h - h // 2 - 10, text=d[1]}
+                end, hover=function(t)
+                    toggle = t
+                    scene_draw()
+                end, cb=switch_scene(function()
+                    for _, v in ipairs(s) do scene_remove_sprite(v) end
+                    for _, v in ipairs(c) do scene_remove_clickable_area(v) end
+                    return d[2]()
+                end), x=x, y=y, z=(v.z or 10) + 1, w=w, h=h}
+            end
+            v.options = nil
+            scene_draw()
+            return r
+        end
         draw_rect{color=0xffffff80, x=0, y=310, w=496, h=58}
         for i=1, dialog_line do
             local s
@@ -281,12 +311,12 @@ function dialog(v)
         end
         return r
     end, z=v.z or 10}
-    local c = {}
     if v.dismiss then
         c[#c + 1] = scene_add_clickable_area{x=0, y=0, w=496, h=368, cb=function()
             if dialog_line < #v or dialog_i <= v[dialog_line]:len() then
                 dialog_line = #v
                 dialog_i = v[dialog_line]:len()
+                scene_draw()
             else
                 for _, v in ipairs(s) do scene_remove_sprite(v) end
                 for _, v in ipairs(c) do scene_remove_clickable_area(v) end
@@ -296,26 +326,6 @@ function dialog(v)
             end
         end, z=v.z}
     end
-    if v.options then
-        for i, d in ipairs(v.options) do
-            local x = 100 + (i - 1) * 200
-            local y = 340
-            local w = image_w(dialog_button)
-            local h = image_h(dialog_button)
-            local toggle = false
-            s[#s + 1], c[#c + 1] = scene_add_clickable_sprite{fn=function()
-                draw_image{img=dialog_button, x=x, y=y}
-                draw_text{color=toggle and 0xffffffff or 0x333333ff, x=x + w - w // 2 - d[1]:len() * 16 // 2, y=y + h - h // 2 - 10, text=d[1]}
-            end, hover=function(t)
-                toggle = t
-                scene_draw()
-            end, cb=switch_scene(function()
-                for _, v in ipairs(s) do scene_remove_sprite(v) end
-                for _, v in ipairs(c) do scene_remove_clickable_area(v) end
-                return d[2]()
-            end), x=x, y=y, z=(v.z or 10) + 1, w=w, h=h}
-        end
-    end
     return scene_play()
 end
 
@@ -324,7 +334,7 @@ function scene_play()
     scene.next = nil
     while scene.playing do
         local t = ticks()
-        local s = scene_draw()
+        local s = scene_draw(true)
         while scene.playing and ticks() - t < 1000 / 30 do
             if not s then wait()
             else wait(math.ceil(1000 / 30 - (ticks() - t)))
@@ -334,7 +344,8 @@ function scene_play()
     if scene.next then return scene.next() end
 end
 
-function scene_draw()
+function scene_draw(next)
+    scene_changed = false
     local s = false
     local r = {}
     for i, v in ipairs(scene.sprites) do
@@ -344,18 +355,17 @@ function scene_draw()
         table.remove(scene.sprites, v - i + 1)
     end
     for _, sprite in ipairs(scene.sprites) do
-        if not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick then
+        if next and (not sprite.last_tick or sprite.next_tick and ticks() >= sprite.next_tick) then
             sprite.last_tick = ticks()
         end
-        local x = sprite.fn(sprite.next_tick and ticks() >= sprite.next_tick)
+        local x = sprite.fn(next and sprite.next_tick and ticks() >= sprite.next_tick)
         if x then
             s = true
-            sprite.next_tick = sprite.last_tick + x
-        else
+            if next then sprite.next_tick = sprite.last_tick + x end
+        elseif next then
             sprite.next_tick = nil
         end
         if scene_changed then
-            scene_changed = false
             return scene_draw()
         end
     end

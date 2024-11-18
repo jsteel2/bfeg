@@ -80,7 +80,17 @@ end
 function scene1()
     scene_clear()
     scene_set_background(load_image("bg4.png"))
-    scene_add_animation{sheet=load_image("trixie-lay.png"), sheet_size=3, fps=7, x=300, y=225, start_frame={3000, 1}, frames={3, 6, 2, [6]={3000, 1}}}
+    scene_add_clickable_animation{sheet=load_image("trixie-lay.png"), sheet_size=3, fps=7, x=300, y=225, start_frame={3000, 1}, frames={3, 6, 2, [6]={3000, 1}}, cb=switch_scene(function()
+        scene_clear()
+        local o = {{"WINGS!", function() form = form_pegasus end}, {"HORN!", function() form = form_unicorn end}}
+        if form == form_unicorn then
+            o[2] = {"EARTH!", function() form = form_earth end}
+        elseif form == form_pegasus then
+            o[1] = {"EARTH!", function() form = form_earth end}
+        end
+        dialog{"HM? DO YOU WANT SOMETHING?", options=o}
+        return scene1()
+    end)}
     scene_add_arrow(RIGHT, 445, 315, scene2)
     scene_add_arrow(LEFT, 0, 315, scene4)
     scene_add_arrow(UP, 220, 215, scene5)
