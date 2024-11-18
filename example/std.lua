@@ -116,11 +116,13 @@ end
 function scene_add_animation(v)
     local start_frame = v.start_frame or 1
     local cur_frame = start_frame
-    local anim_size = v.anim_size or v.sheet_size
-    v.w = image_w(v.sheet) // v.sheet_size
-    v.h = image_h(v.sheet)
+    local anim_size = v.row_width or v.anim_size or v.sheet_size
+    local rows = v.rows or 1
+    local w = image_w(v.sheet)
+    v.w = image_w(v.sheet) // (v.row_width or v.sheet_size)
+    v.h = image_h(v.sheet) // rows
     local function draw(x)
-        local a = {img=v.sheet, x=v.x, y=v.y, srcx=(cur_frame - start_frame) % anim_size * v.w, srcy=0, w=v.w, h=v.h}
+        local a = {img=v.sheet, x=v.x, y=v.y, srcx=((cur_frame - start_frame) % anim_size * v.w) % w, srcy=((cur_frame - start_frame) % (v.anim_size or v.sheet_size) * v.w) // w * v.h, w=v.w, h=v.h}
         if x then
             for k, v in pairs(x) do a[k] = v end
         end
