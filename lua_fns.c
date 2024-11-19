@@ -444,6 +444,8 @@ void def_lua_fns(lua_State *L, SDL_Renderer *r, SDL_Window *w, zip_t *z)
     lua_setglobal(L, "play_music");
     lua_pushcfunction(L, l_queue_music);
     lua_setglobal(L, "queue_music");
+    lua_pushcfunction(L, l_stop_music);
+    lua_setglobal(L, "stop_music");
     lua_pushcfunction(L, l_render);
     lua_setglobal(L, "render");
     lua_pushcfunction(L, l_draw_image);
